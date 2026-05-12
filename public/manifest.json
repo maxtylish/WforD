@@ -1,0 +1,14 @@
+{
+  "name": "下一餐吃什麼",
+  "short_name": "下一餐",
+  "description": "台中美食地圖 — 停車方便、評價優質的餐廳",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#f04e37",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

@@ -1,0 +1,39 @@
+import { NextRequest, NextResponse } from "next/server";
+import { supabase } from "@/lib/supabase";
+import type { VisitedPlace } from "@/types";
+
+// PATCH /api/visited/[id] — update fields of a visited place
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const body: Partial<VisitedPlace> = await req.json();
+
+  const { data, error } = await supabase
+    .from("visited_places")
+    .update({ ...body, updated_at: new Date().toISOString() })
+    .eq("id", params.id)
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+  return NextResponse.json({ visited: data });
+}
+
+// DELETE /api/visited/[id]
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const { error } = await supabase
+    .from("visited_places")
+    .delete()
+    .eq("id", params.id);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+  return new NextResponse(null, { status: 204 });
+}

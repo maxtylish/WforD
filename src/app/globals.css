@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand: #f04e37;
+  --brand-dark: #b9251a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Custom scrollbar */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 4px;
+}
+
+/* Star rating */
+.star-filled {
+  color: #f59e0b;
+}
+.star-empty {
+  color: #d1d5db;
+}
+
+/* Map info window override */
+.gm-style .gm-style-iw-c {
+  border-radius: 12px !important;
+  padding: 0 !important;
+}
+.gm-style .gm-style-iw-d {
+  overflow: hidden !important;
+}
+.gm-ui-hover-effect {
+  top: 4px !important;
+  right: 4px !important;
+}
+
+/* Bottom sheet animation */
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+/* Pulse animation for selected marker */
+@keyframes markerPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
