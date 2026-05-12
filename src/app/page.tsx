@@ -25,6 +25,7 @@ import VisitedTab from "@/components/VisitedTab";
 import ReviewModal, { type ReviewFormData } from "@/components/ReviewModal";
 import ParkingPanel from "@/components/ParkingPanel";
 import FavoritesTab from "@/components/FavoritesTab";
+import BrandFooter from "@/components/BrandFooter";
 import { MapPin, List, Bookmark, Heart, LocateFixed, ChevronUp, Home, Building2, Briefcase } from "lucide-react";
 
 const QUICK_DESTINATIONS = [
@@ -438,8 +439,11 @@ export default function HomePage() {
             <MapPin className="w-4 h-4 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="font-bold text-gray-900 text-base leading-tight">下一餐吃什麼</h1>
-            <p className="text-xs text-gray-400 truncate">台中美食 + 停車地圖</p>
+            <h1 className="font-bold text-gray-900 text-base leading-tight">等等吃什麼</h1>
+            <p className="text-xs text-gray-400 truncate">
+              台中美食 + 停車地圖
+              <span className="hidden sm:inline text-gray-300"> · Powered by Lukuarts Studio</span>
+            </p>
           </div>
           <button
             onClick={handleLocate}
@@ -555,6 +559,9 @@ export default function HomePage() {
               />
             )}
           </div>
+
+          {/* Brand footer — desktop sidebar */}
+          <BrandFooter />
         </aside>
 
         {/* Map */}
@@ -702,6 +709,9 @@ export default function HomePage() {
               )}
             </div>
           )}
+
+          {/* Brand footer — mobile bottom sheet */}
+          {panelState !== "collapsed" && <BrandFooter />}
         </div>
       </div>
 

@@ -1,7 +1,7 @@
 {
-  "name": "下一餐吃什麼",
-  "short_name": "下一餐",
-  "description": "台中美食地圖 — 停車方便、評價優質的餐廳",
+  "name": "等等吃什麼",
+  "short_name": "等等吃",
+  "description": "台中美食地圖 — 停車方便、評價優質的餐廳 · Powered by Lukuarts Studio",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

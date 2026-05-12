@@ -5,8 +5,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "下一餐吃什麼 — 台中美食地圖",
-  description: "找台中停車方便、Google 評價 4.0+ 的餐廳",
+  title: "等等吃什麼 — 台中美食地圖",
+  description: "找台中停車方便、Google 評價 4.0+ 的餐廳 · Powered by Lukuarts Studio",
   manifest: "/manifest.json",
   icons: { icon: "/favicon.ico" },
 };
