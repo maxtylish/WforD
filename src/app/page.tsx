@@ -131,14 +131,17 @@ export default function HomePage() {
 
   // ── Navigation ─────────────────────────────────────────────────────────────
   const handleNavigate = (target: Restaurant | VisitedPlace) => {
-    const lat = target.lat;
-    const lng = target.lng;
-    const name = target.name;
-    // Opens Google Maps navigation (works on mobile and desktop)
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=${
-      (target as Restaurant).place_id ?? ""
-    }&travelmode=driving`;
-    window.open(url, "_blank");
+    const { lat, lng } = target;
+    const placeId = (target as Restaurant).place_id ?? "";
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}${placeId ? `&destination_place_id=${placeId}` : ""}&travelmode=driving`;
+    // Use anchor click to avoid popup blocker
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   // ── Review / Record ────────────────────────────────────────────────────────
