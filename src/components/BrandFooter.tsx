@@ -25,7 +25,7 @@ export default function BrandFooter() {
           0932-754-860
         </a>
         <a
-          href="https://lukuarts.studio"
+          href="https://lukuarts-website.vercel.app"
           target="_blank"
           rel="noopener noreferrer"
           className="text-xs font-medium transition-colors"
