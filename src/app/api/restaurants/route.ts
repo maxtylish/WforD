@@ -68,8 +68,11 @@ async function textSearch(
     body: JSON.stringify({
       textQuery: query,
       maxResultCount: 20,
+      // Use locationBias (not locationRestriction) so brand searches aren't
+      // cut off by a hard boundary — results outside radius still appear but
+      // are ranked lower. Use a generous 10km bias for city-wide brand search.
       locationBias: {
-        circle: { center: { latitude: lat, longitude: lng }, radius },
+        circle: { center: { latitude: lat, longitude: lng }, radius: Math.max(radius, 10000) },
       },
       rankPreference: "RELEVANCE",
       languageCode: "zh-TW",
@@ -131,7 +134,11 @@ export async function GET(req: NextRequest) {
     let raw: Response;
 
     if (keyword) {
-      const query = cuisine !== "全部" ? `${keyword} ${cuisine}餐廳 台中` : `${keyword} 餐廳 台中`;
+      // Brand / name search: just use the keyword + city, no extra noise words
+      // The Places API handles restaurant context automatically
+      const query = cuisine !== "全部"
+        ? `${keyword} ${cuisine} 台中市`
+        : `${keyword} 台中市`;
       raw = await textSearch(query, lat, lng, radius);
     } else if (TEXT_SEARCH_QUERIES[cuisine]) {
       raw = await textSearch(`${TEXT_SEARCH_QUERIES[cuisine]} 台中`, lat, lng, radius);
@@ -152,8 +159,10 @@ export async function GET(req: NextRequest) {
     let restaurants: Restaurant[] = places.map((p: any) => mapPlace(p, cuisine));
 
     // Client-side filters
-    if (minRating > 0)  restaurants = restaurants.filter(r => r.google_rating >= minRating);
-    if (openNow)        restaurants = restaurants.filter(r => r.is_open === true);
+    // Skip minRating & openNow when user is doing a keyword/brand search —
+    // they're looking for a specific place by name, not discovering new ones.
+    if (minRating > 0 && !keyword) restaurants = restaurants.filter(r => r.google_rating >= minRating);
+    if (openNow && !keyword)       restaurants = restaurants.filter(r => r.is_open === true);
     if (maxPrice > 0)   restaurants = restaurants.filter(r => !r.price_level || r.price_level <= maxPrice);
     if (requirePark)    restaurants = restaurants.filter(r => r.has_parking || (r.parking_types && r.parking_types.length > 0));
 
