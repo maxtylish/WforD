@@ -60,6 +60,32 @@ CREATE TRIGGER on_visited_places_update
 -- ── Migration: add parking_type column (run if table already exists) ─────
 -- ALTER TABLE public.visited_places ADD COLUMN IF NOT EXISTS parking_type TEXT;
 
+-- ── favorites table ───────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.favorites (
+  id            UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+  place_id      TEXT         NOT NULL UNIQUE,
+  name          TEXT         NOT NULL,
+  address       TEXT         DEFAULT '',
+  cuisine_type  TEXT         DEFAULT '其他',
+  google_rating NUMERIC(2,1) DEFAULT 0,
+  lat           NUMERIC(10,8) NOT NULL DEFAULT 0,
+  lng           NUMERIC(11,8) NOT NULL DEFAULT 0,
+  photo_url     TEXT,
+  price_level   SMALLINT,
+  created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_favorites_created_at
+  ON public.favorites (created_at DESC);
+
+ALTER TABLE public.favorites ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow all for favorites"
+  ON public.favorites
+  FOR ALL
+  USING (true)
+  WITH CHECK (true);
+
 -- ── Sample data (optional, remove if not needed) ──────────────────────────
 -- INSERT INTO public.visited_places (place_id, name, address, cuisine_type, google_rating, has_parking, lat, lng, personal_rating, review_text)
 -- VALUES

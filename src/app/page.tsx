@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
-import type { Restaurant, VisitedPlace, SearchFilters, LatLng, ParkingLot } from "@/types";
+import type { Restaurant, VisitedPlace, SearchFilters, LatLng, ParkingLot, FavoritePlace } from "@/types";
 import { TAICHUNG_CENTER } from "@/types";
 import { MOCK_RESTAURANTS } from "@/lib/mock-data";
 import {
@@ -13,13 +13,19 @@ import {
   deleteVisitedPlace,
   lsGetVisited,
   lsSaveVisited,
+  getFavorites,
+  addFavorite,
+  removeFavorite,
+  lsGetFavorites,
+  lsSaveFavorites,
 } from "@/lib/supabase";
 import FilterBar from "@/components/FilterBar";
 import RestaurantList from "@/components/RestaurantList";
 import VisitedTab from "@/components/VisitedTab";
 import ReviewModal, { type ReviewFormData } from "@/components/ReviewModal";
 import ParkingPanel from "@/components/ParkingPanel";
-import { MapPin, List, Bookmark, LocateFixed, ChevronUp, Home, Building2, Briefcase } from "lucide-react";
+import FavoritesTab from "@/components/FavoritesTab";
+import { MapPin, List, Bookmark, Heart, LocateFixed, ChevronUp, Home, Building2, Briefcase } from "lucide-react";
 
 const QUICK_DESTINATIONS = [
   {
@@ -56,7 +62,7 @@ const DEFAULT_FILTERS: SearchFilters = {
   sortBy: "POPULARITY",
 };
 
-type Tab = "search" | "visited";
+type Tab = "search" | "visited" | "favorites";
 type PanelState = "collapsed" | "half" | "full";
 
 export default function HomePage() {
@@ -73,26 +79,33 @@ export default function HomePage() {
   const [panelState, setPanelState] = useState<PanelState>("half");
   const [hasMapsKey] = useState(() => !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
 
+  // Favorites state
+  const [favorites, setFavorites] = useState<FavoritePlace[]>([]);
+
   // Parking state
   const [parkingLots, setParkingLots] = useState<ParkingLot[]>([]);
   const [parkingLoading, setParkingLoading] = useState(false);
   const [showParkingPanel, setShowParkingPanel] = useState(false);
   const [parkingTarget, setParkingTarget] = useState<Restaurant | null>(null);
 
-  // Merge visited status into restaurants
+  // Merge visited + favorite status into restaurants
   const enrichedRestaurants = restaurants.map((r) => {
     const visited = visitedPlaces.find((v) => v.place_id === r.place_id);
-    return visited
-      ? {
-          ...r,
-          is_visited: true,
-          visited_id: visited.id,
-          personal_rating: visited.personal_rating ?? undefined,
-          review_text: visited.review_text ?? undefined,
-          has_parking: visited.has_parking,
-          parking_distance_meters: visited.parking_distance_meters ?? undefined,
-        }
-      : r;
+    const isFav = favorites.some((f) => f.place_id === r.place_id);
+    return {
+      ...r,
+      is_favorite: isFav,
+      ...(visited
+        ? {
+            is_visited: true,
+            visited_id: visited.id,
+            personal_rating: visited.personal_rating ?? undefined,
+            review_text: visited.review_text ?? undefined,
+            has_parking: visited.has_parking,
+            parking_distance_meters: visited.parking_distance_meters ?? undefined,
+          }
+        : {}),
+    };
   });
 
   // ── Data loading ───────────────────────────────────────────────────────────
@@ -104,6 +117,70 @@ export default function HomePage() {
       setVisitedPlaces(lsGetVisited());
     }
   }, []);
+
+  const loadFavorites = useCallback(async () => {
+    if (isSupabaseConfigured()) {
+      setFavorites(await getFavorites());
+    } else {
+      setFavorites(lsGetFavorites());
+    }
+  }, []);
+
+  const handleToggleFavorite = async (restaurant: Restaurant) => {
+    const already = favorites.some((f) => f.place_id === restaurant.place_id);
+    if (already) {
+      // Remove
+      if (isSupabaseConfigured()) {
+        await removeFavorite(restaurant.place_id);
+        await loadFavorites();
+      } else {
+        const updated = lsGetFavorites().filter((f) => f.place_id !== restaurant.place_id);
+        lsSaveFavorites(updated);
+        setFavorites(updated);
+      }
+    } else {
+      // Add
+      const payload: Omit<FavoritePlace, "id" | "created_at"> = {
+        place_id: restaurant.place_id,
+        name: restaurant.name,
+        address: restaurant.address,
+        cuisine_type: restaurant.cuisine_type,
+        google_rating: restaurant.google_rating,
+        lat: restaurant.lat,
+        lng: restaurant.lng,
+        photo_url: restaurant.photo_url ?? null,
+        price_level: restaurant.price_level ?? null,
+      };
+      if (isSupabaseConfigured()) {
+        await addFavorite(payload);
+        await loadFavorites();
+      } else {
+        const now = new Date().toISOString();
+        const newFav: FavoritePlace = { ...payload, id: `ls_fav_${Date.now()}`, created_at: now };
+        const updated = [newFav, ...lsGetFavorites()];
+        lsSaveFavorites(updated);
+        setFavorites(updated);
+      }
+    }
+  };
+
+  const handleRemoveFavorite = async (place_id: string) => {
+    if (isSupabaseConfigured()) {
+      await removeFavorite(place_id);
+      await loadFavorites();
+    } else {
+      const updated = lsGetFavorites().filter((f) => f.place_id !== place_id);
+      lsSaveFavorites(updated);
+      setFavorites(updated);
+    }
+  };
+
+  const handleNavigateFavorite = (place: FavoritePlace) => {
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}&destination_place_id=${place.place_id}&travelmode=driving`;
+    const a = document.createElement("a");
+    a.href = url; a.target = "_blank"; a.rel = "noopener noreferrer";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  };
 
   const searchRestaurants = useCallback(async () => {
     if (!hasMapsKey) {
@@ -156,6 +233,7 @@ export default function HomePage() {
 
   useEffect(() => {
     loadVisited();
+    loadFavorites();
     searchRestaurants();
   }, []); // Initial load
 
@@ -403,27 +481,32 @@ export default function HomePage() {
           <div className="flex border-b border-gray-200 bg-white">
             <button
               onClick={() => setActiveTab("search")}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium transition-colors border-b-2 ${
-                activeTab === "search"
-                  ? "border-brand-500 text-brand-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
-              style={activeTab === "search" ? { borderColor: "var(--brand)", color: "var(--brand)" } : {}}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium transition-colors border-b-2"
+              style={activeTab === "search" ? { borderColor: "var(--brand)", color: "var(--brand)" } : { borderColor: "transparent", color: "#6b7280" }}
             >
               <List className="w-4 h-4" />
-              搜尋結果
+              搜尋
+            </button>
+            <button
+              onClick={() => setActiveTab("favorites")}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium transition-colors border-b-2 relative"
+              style={activeTab === "favorites" ? { borderColor: "var(--brand)", color: "var(--brand)" } : { borderColor: "transparent", color: "#6b7280" }}
+            >
+              <Heart className="w-4 h-4" />
+              最愛
+              {favorites.length > 0 && (
+                <span className="ml-1 text-xs bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                  {favorites.length > 9 ? "9+" : favorites.length}
+                </span>
+              )}
             </button>
             <button
               onClick={() => setActiveTab("visited")}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium transition-colors border-b-2 relative ${
-                activeTab === "visited"
-                  ? "border-brand-500 text-brand-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
-              style={activeTab === "visited" ? { borderColor: "var(--brand)", color: "var(--brand)" } : {}}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium transition-colors border-b-2 relative"
+              style={activeTab === "visited" ? { borderColor: "var(--brand)", color: "var(--brand)" } : { borderColor: "transparent", color: "#6b7280" }}
             >
               <Bookmark className="w-4 h-4" />
-              去過的地方
+              去過
               {visitedPlaces.length > 0 && (
                 <span className="ml-1 text-xs bg-green-500 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold">
                   {visitedPlaces.length > 9 ? "9+" : visitedPlaces.length}
@@ -453,9 +536,16 @@ export default function HomePage() {
                 onNavigate={handleNavigate}
                 onRecord={handleOpenRecord}
                 onFindParking={hasMapsKey ? handleFindParking : undefined}
+                onFavorite={handleToggleFavorite}
                 loading={loading}
                 isDemoMode={!hasMapsKey}
                 debugMessage={searchDebug}
+              />
+            ) : activeTab === "favorites" ? (
+              <FavoritesTab
+                favorites={favorites}
+                onNavigate={handleNavigateFavorite}
+                onRemove={handleRemoveFavorite}
               />
             ) : (
               <VisitedTab
@@ -533,29 +623,31 @@ export default function HomePage() {
             <div className="flex border-b border-gray-200">
               <button
                 onClick={() => setActiveTab("search")}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === "search"
-                    ? "border-brand-500"
-                    : "border-transparent text-gray-500"
-                }`}
-                style={activeTab === "search" ? { borderColor: "var(--brand)", color: "var(--brand)" } : {}}
+                className="flex-1 flex items-center justify-center gap-1 py-2.5 text-xs font-medium border-b-2 transition-colors"
+                style={activeTab === "search" ? { borderColor: "var(--brand)", color: "var(--brand)" } : { borderColor: "transparent", color: "#6b7280" }}
               >
-                <List className="w-4 h-4" />
-                搜尋
+                <List className="w-3.5 h-3.5" />搜尋
+              </button>
+              <button
+                onClick={() => setActiveTab("favorites")}
+                className="flex-1 flex items-center justify-center gap-1 py-2.5 text-xs font-medium border-b-2 transition-colors relative"
+                style={activeTab === "favorites" ? { borderColor: "var(--brand)", color: "var(--brand)" } : { borderColor: "transparent", color: "#6b7280" }}
+              >
+                <Heart className="w-3.5 h-3.5" />最愛
+                {favorites.length > 0 && (
+                  <span className="ml-0.5 text-xs bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                    {favorites.length > 9 ? "9+" : favorites.length}
+                  </span>
+                )}
               </button>
               <button
                 onClick={() => setActiveTab("visited")}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium border-b-2 transition-colors relative ${
-                  activeTab === "visited"
-                    ? "border-brand-500"
-                    : "border-transparent text-gray-500"
-                }`}
-                style={activeTab === "visited" ? { borderColor: "var(--brand)", color: "var(--brand)" } : {}}
+                className="flex-1 flex items-center justify-center gap-1 py-2.5 text-xs font-medium border-b-2 transition-colors relative"
+                style={activeTab === "visited" ? { borderColor: "var(--brand)", color: "var(--brand)" } : { borderColor: "transparent", color: "#6b7280" }}
               >
-                <Bookmark className="w-4 h-4" />
-                去過
+                <Bookmark className="w-3.5 h-3.5" />去過
                 {visitedPlaces.length > 0 && (
-                  <span className="ml-1 text-xs bg-green-500 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                  <span className="ml-0.5 text-xs bg-green-500 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold">
                     {visitedPlaces.length > 9 ? "9+" : visitedPlaces.length}
                   </span>
                 )}
@@ -590,8 +682,16 @@ export default function HomePage() {
                   onNavigate={handleNavigate}
                   onRecord={handleOpenRecord}
                   onFindParking={hasMapsKey ? handleFindParking : undefined}
+                  onFavorite={handleToggleFavorite}
                   loading={loading}
                   isDemoMode={!hasMapsKey}
+                  debugMessage={searchDebug}
+                />
+              ) : activeTab === "favorites" ? (
+                <FavoritesTab
+                  favorites={favorites}
+                  onNavigate={handleNavigateFavorite}
+                  onRemove={handleRemoveFavorite}
                 />
               ) : (
                 <VisitedTab

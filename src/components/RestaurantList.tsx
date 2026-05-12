@@ -11,6 +11,7 @@ interface RestaurantListProps {
   onNavigate: (restaurant: Restaurant) => void;
   onRecord: (restaurant: Restaurant) => void;
   onFindParking?: (restaurant: Restaurant) => void;
+  onFavorite?: (restaurant: Restaurant) => void;
   loading: boolean;
   isDemoMode: boolean;
   debugMessage?: string | null;
@@ -23,6 +24,7 @@ export default function RestaurantList({
   onNavigate,
   onRecord,
   onFindParking,
+  onFavorite,
   loading,
   isDemoMode,
   debugMessage,
@@ -71,6 +73,7 @@ export default function RestaurantList({
           onNavigate={onNavigate}
           onRecord={onRecord}
           onFindParking={onFindParking}
+          onFavorite={onFavorite}
         />
       ))}
     </div>

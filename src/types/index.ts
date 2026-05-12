@@ -122,6 +122,7 @@ export interface Restaurant {
   personal_rating?: number;
   review_text?: string;
   phone?: string;
+  is_favorite?: boolean;
 }
 
 // ── VisitedPlace ──────────────────────────────────────────────────────────
@@ -161,6 +162,21 @@ export interface SearchFilters {
 
 export interface LatLng { lat: number; lng: number; }
 export const TAICHUNG_CENTER: LatLng = { lat: 24.1477, lng: 120.6736 };
+
+// ── Favorite Place ────────────────────────────────────────────────────────
+export interface FavoritePlace {
+  id: string;
+  place_id: string;
+  name: string;
+  address: string;
+  cuisine_type: CuisineType;
+  google_rating: number;
+  lat: number;
+  lng: number;
+  photo_url?: string | null;
+  price_level?: number | null;
+  created_at: string;
+}
 
 // ── Parking Lot (from /api/parking) ──────────────────────────────────────
 export interface ParkingLot {

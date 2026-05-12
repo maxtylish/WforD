@@ -2,7 +2,7 @@
 
 import type { Restaurant } from "@/types";
 import { PRICE_LEVEL_INFO, PARKING_TYPE_INFO } from "@/types";
-import { Star, MapPin, Navigation2, BookmarkPlus, BookmarkCheck, ChevronRight, ParkingSquare } from "lucide-react";
+import { Star, MapPin, Navigation2, BookmarkPlus, BookmarkCheck, Heart, ParkingSquare } from "lucide-react";
 
 interface RestaurantCardProps {
   restaurant: Restaurant;
@@ -11,6 +11,7 @@ interface RestaurantCardProps {
   onNavigate: (r: Restaurant) => void;
   onRecord:   (r: Restaurant) => void;
   onFindParking?: (r: Restaurant) => void;
+  onFavorite?: (r: Restaurant) => void;
 }
 
 function Stars({ rating }: { rating: number }) {
@@ -23,10 +24,10 @@ function Stars({ rating }: { rating: number }) {
   );
 }
 
-export default function RestaurantCard({ restaurant, isSelected, onClick, onNavigate, onRecord, onFindParking }: RestaurantCardProps) {
+export default function RestaurantCard({ restaurant, isSelected, onClick, onNavigate, onRecord, onFindParking, onFavorite }: RestaurantCardProps) {
   const { name, address, google_rating, total_ratings, cuisine_type,
           parking_types, has_parking, is_open, is_visited,
-          personal_rating, price_level } = restaurant;
+          personal_rating, price_level, is_favorite } = restaurant;
 
   const priceInfo = price_level ? PRICE_LEVEL_INFO[price_level] : null;
 
@@ -65,7 +66,17 @@ export default function RestaurantCard({ restaurant, isSelected, onClick, onNavi
             )}
           </div>
         </div>
-        <ChevronRight className="w-4 h-4 text-gray-300 shrink-0 mt-1" />
+        <div className="flex items-center gap-1 shrink-0">
+          {onFavorite && (
+            <button
+              onClick={e => { e.stopPropagation(); onFavorite(restaurant); }}
+              className="p-1 rounded-lg transition-colors hover:bg-gray-100"
+              title={is_favorite ? "移除最愛" : "加入最愛"}
+            >
+              <Heart className={`w-4 h-4 transition-colors ${is_favorite ? "fill-red-500 text-red-500" : "text-gray-300 hover:text-red-400"}`} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Rating row */}
