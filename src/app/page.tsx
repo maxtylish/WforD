@@ -19,7 +19,28 @@ import RestaurantList from "@/components/RestaurantList";
 import VisitedTab from "@/components/VisitedTab";
 import ReviewModal, { type ReviewFormData } from "@/components/ReviewModal";
 import ParkingPanel from "@/components/ParkingPanel";
-import { MapPin, List, Bookmark, LocateFixed, ChevronUp } from "lucide-react";
+import { MapPin, List, Bookmark, LocateFixed, ChevronUp, Home, Building2, Briefcase } from "lucide-react";
+
+const QUICK_DESTINATIONS = [
+  {
+    label: "回家",
+    address: "南投縣鹿谷鄉鹿谷村六合街177號",
+    icon: Home,
+    color: "text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100",
+  },
+  {
+    label: "回宿舍",
+    address: "403臺中市西區公民里五廊街102之6號",
+    icon: Building2,
+    color: "text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100",
+  },
+  {
+    label: "回公司",
+    address: "403台中市西區美村路一段216號",
+    icon: Briefcase,
+    color: "text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100",
+  },
+] as const;
 
 // Dynamically import Map to avoid SSR issues with Google Maps
 const Map = dynamic(() => import("@/components/Map"), { ssr: false });
@@ -134,6 +155,18 @@ export default function HomePage() {
       },
       (err) => console.warn("[Geolocation]", err.message)
     );
+  };
+
+  // ── Quick destination navigation ───────────────────────────────────────────
+  const handleQuickNav = (address: string) => {
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}&travelmode=driving`;
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   // ── Navigation ─────────────────────────────────────────────────────────────
@@ -304,24 +337,41 @@ export default function HomePage() {
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       {/* ── Header ────────────────────────────────────────────────────────── */}
-      <header className="flex items-center gap-3 px-4 py-3 bg-white shadow-sm z-20">
-        <div
-          className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-          style={{ backgroundColor: "var(--brand)" }}
-        >
-          <MapPin className="w-4 h-4 text-white" />
+      <header className="bg-white shadow-sm z-20">
+        {/* Row 1: Logo + title + locate */}
+        <div className="flex items-center gap-3 px-4 pt-3 pb-2">
+          <div
+            className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+            style={{ backgroundColor: "var(--brand)" }}
+          >
+            <MapPin className="w-4 h-4 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h1 className="font-bold text-gray-900 text-base leading-tight">下一餐吃什麼</h1>
+            <p className="text-xs text-gray-400 truncate">台中美食 + 停車地圖</p>
+          </div>
+          <button
+            onClick={handleLocate}
+            className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors"
+            title="定位到我的位置"
+          >
+            <LocateFixed className="w-4 h-4 text-gray-600" />
+          </button>
         </div>
-        <div className="flex-1 min-w-0">
-          <h1 className="font-bold text-gray-900 text-base leading-tight">下一餐吃什麼</h1>
-          <p className="text-xs text-gray-400 truncate">台中美食 + 停車地圖</p>
+
+        {/* Row 2: Quick destination buttons */}
+        <div className="flex gap-2 px-4 pb-3 overflow-x-auto scrollbar-none">
+          {QUICK_DESTINATIONS.map(({ label, address, icon: Icon, color }) => (
+            <button
+              key={label}
+              onClick={() => handleQuickNav(address)}
+              className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors shrink-0 ${color}`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {label}
+            </button>
+          ))}
         </div>
-        <button
-          onClick={handleLocate}
-          className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors"
-          title="定位到我的位置"
-        >
-          <LocateFixed className="w-4 h-4 text-gray-600" />
-        </button>
       </header>
 
       {/* ── Desktop layout (md+): sidebar + map side by side ─────────────── */}
