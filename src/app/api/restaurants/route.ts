@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Restaurant, CuisineType, SortBy } from "@/types";
-import { CUISINE_TO_PLACE_TYPES, TEXT_SEARCH_QUERIES, detectCuisineType, detectParkingTypes } from "@/types";
+import { CUISINE_TO_PLACE_TYPES, TEXT_SEARCH_QUERIES, NON_FOOD_CUISINES, detectCuisineType, detectParkingTypes } from "@/types";
 
 const GOOGLE_KEY =
   process.env.GOOGLE_PLACES_API_KEY ??
@@ -168,9 +168,10 @@ export async function GET(req: NextRequest) {
     let restaurants: Restaurant[] = places.map((p: any) => mapPlace(p, cuisine));
 
     // Client-side filters
-    // ALL filters are skipped for keyword/brand searches — the user explicitly
-    // typed a name, so show every matching location regardless of rating/price/etc.
-    if (!keyword) {
+    // Skipped for: (1) keyword/brand searches — user typed a name explicitly;
+    //              (2) non-food categories (親子樂園, 連鎖藥局) — rating/price filters make no sense there.
+    const isNonFood = NON_FOOD_CUISINES.includes(cuisine);
+    if (!keyword && !isNonFood) {
       if (minRating > 0) restaurants = restaurants.filter(r => r.google_rating >= minRating);
       if (openNow)       restaurants = restaurants.filter(r => r.is_open === true);
       if (maxPrice > 0)  restaurants = restaurants.filter(r => !r.price_level || r.price_level <= maxPrice);

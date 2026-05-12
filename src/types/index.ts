@@ -2,11 +2,13 @@
 export type CuisineType =
   | "全部" | "台式" | "中式" | "日式" | "韓式"
   | "義式" | "美式" | "東南亞" | "火鍋" | "燒烤"
-  | "早午餐" | "甜點咖啡" | "海鮮" | "素食" | "百貨美食街" | "其他";
+  | "早午餐" | "甜點咖啡" | "海鮮" | "素食" | "百貨美食街"
+  | "親子樂園" | "連鎖藥局" | "其他";
 
 export const CUISINE_TYPES: CuisineType[] = [
   "全部","台式","中式","日式","韓式","義式","美式",
-  "東南亞","火鍋","燒烤","早午餐","甜點咖啡","海鮮","素食","百貨美食街","其他",
+  "東南亞","火鍋","燒烤","早午餐","甜點咖啡","海鮮","素食","百貨美食街",
+  "親子樂園","連鎖藥局","其他",
 ];
 
 export const CUISINE_TO_PLACE_TYPES: Record<CuisineType, string[]> = {
@@ -25,12 +27,19 @@ export const CUISINE_TO_PLACE_TYPES: Record<CuisineType, string[]> = {
   海鮮:      ["seafood_restaurant"],
   素食:      [],
   百貨美食街:["shopping_mall","food_court"],
+  親子樂園:  ["playground","amusement_park"],
+  連鎖藥局:  ["pharmacy","drugstore"],
   其他:      ["restaurant"],
 };
 
 export const TEXT_SEARCH_QUERIES: Partial<Record<CuisineType, string>> = {
-  素食: "素食餐廳",
+  素食:   "素食餐廳",
+  // 親子樂園 uses textSearch for better indoor play space coverage
+  親子樂園: "親子樂園 兒童遊樂場 溜滑梯",
 };
+
+/** Categories that are NOT food — skip rating/price filters for these */
+export const NON_FOOD_CUISINES: CuisineType[] = ["親子樂園", "連鎖藥局"];
 
 export function detectCuisineType(placeTypes: string[]): CuisineType {
   const t = new Set(placeTypes);
@@ -47,6 +56,8 @@ export function detectCuisineType(placeTypes: string[]): CuisineType {
   if (t.has("dessert_shop")||t.has("coffee_shop")||t.has("bakery")||t.has("ice_cream_shop")) return "甜點咖啡";
   if (t.has("seafood_restaurant"))                                      return "海鮮";
   if (t.has("shopping_mall")||t.has("food_court")||t.has("department_store")) return "百貨美食街";
+  if (t.has("playground")||t.has("amusement_park"))                    return "親子樂園";
+  if (t.has("pharmacy")||t.has("drugstore"))                           return "連鎖藥局";
   if (t.has("noodle_restaurant"))                                       return "台式";
   if (t.has("cafe"))                                                    return "甜點咖啡";
   return "其他";
