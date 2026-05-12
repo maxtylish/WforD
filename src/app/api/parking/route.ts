@@ -10,6 +10,9 @@ export interface ParkingLot {
   lng: number;
   distance_meters: number;
   is_open?: boolean;
+  google_rating?: number;
+  total_ratings?: number;
+  price_level?: number; // 0=免費 1=便宜 2=適中 3=貴
 }
 
 /** Haversine formula — distance in meters between two lat/lng points */
@@ -23,6 +26,13 @@ function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number)
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
+
+const PRICE_MAP: Record<string, number> = {
+  PRICE_LEVEL_FREE: 0,
+  PRICE_LEVEL_INEXPENSIVE: 1,
+  PRICE_LEVEL_MODERATE: 2,
+  PRICE_LEVEL_EXPENSIVE: 3,
+};
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -40,7 +50,7 @@ export async function GET(req: NextRequest) {
       locationRestriction: {
         circle: {
           center: { latitude: lat, longitude: lng },
-          radius: Math.min(radius, 1000), // cap at 1km for relevance
+          radius: Math.min(radius, 1000),
         },
       },
       maxResultCount: 15,
@@ -58,9 +68,13 @@ export async function GET(req: NextRequest) {
           "places.formattedAddress",
           "places.location",
           "places.currentOpeningHours",
+          "places.rating",
+          "places.userRatingCount",
+          "places.priceLevel",
         ].join(","),
       },
       body: JSON.stringify(body),
+      cache: "no-store",
     });
 
     if (!response.ok) {
@@ -78,6 +92,7 @@ export async function GET(req: NextRequest) {
         const displayName = p.displayName as { text: string } | undefined;
         const openingHours = p.currentOpeningHours as { openNow?: boolean } | undefined;
         const distance = haversineMeters(lat, lng, location.latitude, location.longitude);
+        const priceLevelStr = p.priceLevel as string | undefined;
         return {
           place_id: p.id as string,
           name: displayName?.text ?? "停車場",
@@ -86,6 +101,9 @@ export async function GET(req: NextRequest) {
           lng: location.longitude,
           distance_meters: Math.round(distance),
           is_open: openingHours?.openNow,
+          google_rating: (p.rating as number) ?? undefined,
+          total_ratings: (p.userRatingCount as number) ?? undefined,
+          price_level: priceLevelStr ? PRICE_MAP[priceLevelStr] : undefined,
         };
       })
       .sort((a, b) => a.distance_meters - b.distance_meters);

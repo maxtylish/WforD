@@ -187,4 +187,7 @@ export interface ParkingLot {
   lng: number;
   distance_meters: number;
   is_open?: boolean;
+  google_rating?: number;
+  total_ratings?: number;
+  price_level?: number; // 0=免費 1=便宜 2=適中 3=貴
 }
