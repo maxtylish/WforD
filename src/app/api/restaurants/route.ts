@@ -133,27 +133,37 @@ export async function GET(req: NextRequest) {
 
   try {
     let raw: Response;
+    let searchMode: string;
+    let searchQuery: string;
 
     if (keyword) {
       // Brand / name search: use keyword only — location is handled by locationBias.
       // Adding a city name to the query often confuses the Places API ranking.
-      const query = cuisine !== "全部" ? `${keyword} ${cuisine}` : keyword;
-      raw = await textSearch(query, lat, lng, radius, /* noCache */ true);
+      searchQuery = cuisine !== "全部" ? `${keyword} ${cuisine}` : keyword;
+      searchMode = "textSearch(keyword)";
+      raw = await textSearch(searchQuery, lat, lng, radius, /* noCache */ true);
     } else if (TEXT_SEARCH_QUERIES[cuisine]) {
-      raw = await textSearch(`${TEXT_SEARCH_QUERIES[cuisine]} 台中`, lat, lng, radius);
+      searchQuery = `${TEXT_SEARCH_QUERIES[cuisine]} 台中`;
+      searchMode = "textSearch(cuisine)";
+      raw = await textSearch(searchQuery, lat, lng, radius);
     } else {
       const types = CUISINE_TO_PLACE_TYPES[cuisine] ?? ["restaurant"];
+      searchQuery = types.join(",");
+      searchMode = "nearbySearch";
       raw = await nearbySearch(lat, lng, radius, types, sortBy);
     }
 
+    console.log(`[restaurants] mode=${searchMode} query="${searchQuery}" status=${raw.status}`);
+
     if (!raw.ok) {
       const err = await raw.text();
-      console.error("[Places API]", raw.status, err);
-      return NextResponse.json({ restaurants: [], error: err });
+      console.error("[restaurants] Places API error:", raw.status, err);
+      return NextResponse.json({ restaurants: [], _debug: { mode: searchMode, query: searchQuery, httpStatus: raw.status, apiError: err } });
     }
 
     const data = await raw.json();
     const places = data.places ?? [];
+    console.log(`[restaurants] raw places returned: ${places.length}`);
 
     let restaurants: Restaurant[] = places.map((p: any) => mapPlace(p, cuisine));
 
@@ -167,14 +177,19 @@ export async function GET(req: NextRequest) {
       if (requirePark)   restaurants = restaurants.filter(r => r.has_parking || (r.parking_types && r.parking_types.length > 0));
     }
 
+    console.log(`[restaurants] after filter: ${restaurants.length}`);
+
     // Sort by rating if requested
     if (sortBy === "RATING") {
       restaurants.sort((a, b) => (b.google_rating ?? 0) - (a.google_rating ?? 0));
     }
 
-    return NextResponse.json({ restaurants });
+    return NextResponse.json({
+      restaurants,
+      _debug: { mode: searchMode, query: searchQuery, rawCount: places.length, finalCount: restaurants.length },
+    });
   } catch (err) {
-    console.error("[restaurants API]", err);
-    return NextResponse.json({ error: "Failed to fetch", restaurants: [] }, { status: 500 });
+    console.error("[restaurants API] exception:", err);
+    return NextResponse.json({ error: String(err), restaurants: [] }, { status: 500 });
   }
 }

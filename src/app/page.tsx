@@ -67,6 +67,7 @@ export default function HomePage() {
   const [mapCenter, setMapCenter] = useState<LatLng>(TAICHUNG_CENTER);
   const [activeTab, setActiveTab] = useState<Tab>("search");
   const [loading, setLoading] = useState(false);
+  const [searchDebug, setSearchDebug] = useState<string | null>(null);
   const [reviewTarget, setReviewTarget] = useState<Restaurant | null>(null);
   const [editTarget, setEditTarget] = useState<VisitedPlace | null>(null);
   const [panelState, setPanelState] = useState<PanelState>("half");
@@ -133,7 +134,19 @@ export default function HomePage() {
       });
       const res = await fetch(`/api/restaurants?${params}`);
       const json = await res.json();
-      setRestaurants(json.restaurants ?? []);
+      const list: Restaurant[] = json.restaurants ?? [];
+      setRestaurants(list);
+      // Show debug info when keyword search returns nothing
+      if (filters.keyword && list.length === 0 && json._debug) {
+        const d = json._debug;
+        setSearchDebug(
+          d.apiError
+            ? `API錯誤 (${d.httpStatus}): ${d.apiError}`
+            : `搜尋模式: ${d.mode} | 查詢: "${d.query}" | Google回傳: ${d.rawCount} 筆 | 過濾後: ${d.finalCount} 筆`
+        );
+      } else {
+        setSearchDebug(null);
+      }
     } catch (err) {
       console.error("[searchRestaurants]", err);
     } finally {
@@ -442,6 +455,7 @@ export default function HomePage() {
                 onFindParking={hasMapsKey ? handleFindParking : undefined}
                 loading={loading}
                 isDemoMode={!hasMapsKey}
+                debugMessage={searchDebug}
               />
             ) : (
               <VisitedTab

@@ -13,6 +13,7 @@ interface RestaurantListProps {
   onFindParking?: (restaurant: Restaurant) => void;
   loading: boolean;
   isDemoMode: boolean;
+  debugMessage?: string | null;
 }
 
 export default function RestaurantList({
@@ -24,6 +25,7 @@ export default function RestaurantList({
   onFindParking,
   loading,
   isDemoMode,
+  debugMessage,
 }: RestaurantListProps) {
   if (loading) {
     return (
@@ -36,12 +38,18 @@ export default function RestaurantList({
 
   if (restaurants.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-40 gap-3 text-center px-4">
+      <div className="flex flex-col items-center justify-center gap-3 text-center px-4 py-8">
         <UtensilsCrossed className="w-8 h-8 text-gray-300" />
         <div>
           <p className="text-sm font-medium text-gray-500">找不到符合條件的餐廳</p>
           <p className="text-xs text-gray-400 mt-1">試著調整篩選條件或擴大搜尋範圍</p>
         </div>
+        {debugMessage && (
+          <div className="mt-2 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-xl text-left w-full">
+            <p className="text-xs font-semibold text-yellow-800 mb-1">🔍 診斷資訊</p>
+            <p className="text-xs text-yellow-700 break-all">{debugMessage}</p>
+          </div>
+        )}
       </div>
     );
   }
