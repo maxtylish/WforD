@@ -1,8 +1,22 @@
 "use client";
 
-import { CUISINE_TYPES, PRICE_LEVEL_INFO, type CuisineType, type SearchFilters, type SortBy } from "@/types";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { PRICE_LEVEL_INFO, type CuisineType, type SearchFilters, type SortBy } from "@/types";
+import { Search, SlidersHorizontal, X, ChevronDown } from "lucide-react";
 import { useState } from "react";
+
+// Food categories go into the dropdown
+const FOOD_CUISINES: CuisineType[] = [
+  "全部", "台式", "中式", "日式", "韓式",
+  "義式", "美式", "東南亞", "火鍋", "燒烤",
+  "早午餐", "甜點咖啡", "海鮮", "素食", "其他",
+];
+
+// Special categories get dedicated quick-access buttons
+const SPECIAL_CUISINES: { type: CuisineType; icon: string; short: string }[] = [
+  { type: "百貨美食街", icon: "🏬", short: "百貨" },
+  { type: "親子樂園",   icon: "🎠", short: "親子" },
+  { type: "連鎖藥局",   icon: "💊", short: "藥局" },
+];
 
 interface FilterBarProps {
   filters: SearchFilters;
@@ -115,22 +129,54 @@ export default function FilterBar({ filters, onChange, onSearch, loading }: Filt
         </button>
       </div>
 
-      {/* Cuisine type scroll */}
-      <div className="flex gap-2 px-3 pb-2 overflow-x-auto no-scrollbar">
-        {CUISINE_TYPES.map(type => (
-          <button
-            key={type}
-            onClick={() => set({ cuisineType: type })}
-            className={`shrink-0 text-xs px-3 py-1.5 rounded-full border transition-all font-medium ${
-              filters.cuisineType === type
-                ? "text-white border-transparent"
-                : "bg-white text-gray-600 border-gray-200"
-            }`}
-            style={filters.cuisineType === type ? { backgroundColor: "var(--brand)", borderColor: "var(--brand)" } : {}}
+      {/* Cuisine row: dropdown + special quick buttons */}
+      <div className="flex items-center gap-2 px-3 pb-2">
+        {/* Food category dropdown */}
+        <div className="relative flex-1">
+          <select
+            value={FOOD_CUISINES.includes(filters.cuisineType) ? filters.cuisineType : "全部"}
+            onChange={e => set({ cuisineType: e.target.value as CuisineType })}
+            className="w-full appearance-none text-xs font-medium pl-3 pr-7 py-1.5 rounded-xl border transition-all outline-none cursor-pointer"
+            style={
+              FOOD_CUISINES.includes(filters.cuisineType) && filters.cuisineType !== "全部"
+                ? { backgroundColor: "var(--brand)", color: "#fff", borderColor: "var(--brand)" }
+                : { backgroundColor: "#fff", color: "#374151", borderColor: "#e5e7eb" }
+            }
           >
-            {type}
-          </button>
-        ))}
+            {FOOD_CUISINES.map(type => (
+              <option key={type} value={type}>{type === "全部" ? "🍽️ 美食類型" : type}</option>
+            ))}
+          </select>
+          <ChevronDown
+            className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
+            style={
+              FOOD_CUISINES.includes(filters.cuisineType) && filters.cuisineType !== "全部"
+                ? { color: "#fff" }
+                : { color: "#9ca3af" }
+            }
+          />
+        </div>
+
+        {/* Special category quick buttons */}
+        {SPECIAL_CUISINES.map(({ type, icon, short }) => {
+          const active = filters.cuisineType === type;
+          return (
+            <button
+              key={type}
+              onClick={() => set({ cuisineType: active ? "全部" : type })}
+              className="shrink-0 flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-xl border transition-all"
+              style={
+                active
+                  ? { backgroundColor: "var(--brand)", color: "#fff", borderColor: "var(--brand)" }
+                  : { backgroundColor: "#fff", color: "#374151", borderColor: "#e5e7eb" }
+              }
+              title={type}
+            >
+              <span>{icon}</span>
+              <span>{short}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Advanced filters */}
