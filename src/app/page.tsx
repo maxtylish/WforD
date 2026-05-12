@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
-import type { Restaurant, VisitedPlace, SearchFilters, LatLng } from "@/types";
+import type { Restaurant, VisitedPlace, SearchFilters, LatLng, ParkingLot } from "@/types";
 import { TAICHUNG_CENTER } from "@/types";
 import { MOCK_RESTAURANTS } from "@/lib/mock-data";
 import {
@@ -18,6 +18,7 @@ import FilterBar from "@/components/FilterBar";
 import RestaurantList from "@/components/RestaurantList";
 import VisitedTab from "@/components/VisitedTab";
 import ReviewModal, { type ReviewFormData } from "@/components/ReviewModal";
+import ParkingPanel from "@/components/ParkingPanel";
 import { MapPin, List, Bookmark, LocateFixed, ChevronUp } from "lucide-react";
 
 // Dynamically import Map to avoid SSR issues with Google Maps
@@ -49,6 +50,12 @@ export default function HomePage() {
   const [editTarget, setEditTarget] = useState<VisitedPlace | null>(null);
   const [panelState, setPanelState] = useState<PanelState>("half");
   const [hasMapsKey] = useState(() => !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
+
+  // Parking state
+  const [parkingLots, setParkingLots] = useState<ParkingLot[]>([]);
+  const [parkingLoading, setParkingLoading] = useState(false);
+  const [showParkingPanel, setShowParkingPanel] = useState(false);
+  const [parkingTarget, setParkingTarget] = useState<Restaurant | null>(null);
 
   // Merge visited status into restaurants
   const enrichedRestaurants = restaurants.map((r) => {
@@ -135,6 +142,48 @@ export default function HomePage() {
     const placeId = (target as Restaurant).place_id ?? "";
     const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}${placeId ? `&destination_place_id=${placeId}` : ""}&travelmode=driving`;
     // Use anchor click to avoid popup blocker
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  // ── Find Parking ───────────────────────────────────────────────────────────
+  const handleFindParking = async (restaurant: Restaurant) => {
+    setParkingTarget(restaurant);
+    setShowParkingPanel(true);
+    setParkingLots([]);
+    setParkingLoading(true);
+    // On mobile, expand panel so ParkingPanel is visible
+    setPanelState("half");
+    try {
+      const params = new URLSearchParams({
+        lat: String(restaurant.lat),
+        lng: String(restaurant.lng),
+        radius: "800",
+      });
+      const res = await fetch(`/api/parking?${params}`);
+      const json = await res.json();
+      setParkingLots(json.parking ?? []);
+    } catch (err) {
+      console.error("[handleFindParking]", err);
+      setParkingLots([]);
+    } finally {
+      setParkingLoading(false);
+    }
+  };
+
+  const handleCloseParkingPanel = () => {
+    setShowParkingPanel(false);
+    setParkingLots([]);
+    setParkingTarget(null);
+  };
+
+  const handleNavigateParkingLot = (lot: ParkingLot) => {
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${lot.lat},${lot.lng}&destination_place_id=${lot.place_id}&travelmode=driving`;
     const a = document.createElement("a");
     a.href = url;
     a.target = "_blank";
@@ -322,7 +371,15 @@ export default function HomePage() {
 
           {/* List content */}
           <div className="flex-1 overflow-y-auto p-3 scrollbar-thin">
-            {activeTab === "search" ? (
+            {showParkingPanel ? (
+              <ParkingPanel
+                parkingLots={parkingLots}
+                loading={parkingLoading}
+                restaurantName={parkingTarget?.name ?? ""}
+                onNavigate={handleNavigateParkingLot}
+                onClose={handleCloseParkingPanel}
+              />
+            ) : activeTab === "search" ? (
               <RestaurantList
                 restaurants={enrichedRestaurants}
                 selectedRestaurant={selectedRestaurant}
@@ -332,6 +389,7 @@ export default function HomePage() {
                 }}
                 onNavigate={handleNavigate}
                 onRecord={handleOpenRecord}
+                onFindParking={hasMapsKey ? handleFindParking : undefined}
                 loading={loading}
                 isDemoMode={!hasMapsKey}
               />
@@ -350,9 +408,13 @@ export default function HomePage() {
           <Map
             restaurants={enrichedRestaurants}
             selectedRestaurant={selectedRestaurant}
-            onRestaurantSelect={(r) => setSelectedRestaurant(r)}
+            onRestaurantSelect={(r) => {
+              setSelectedRestaurant(r);
+              setShowParkingPanel(false);
+            }}
             center={mapCenter}
             onCenterChange={setMapCenter}
+            parkingLots={parkingLots}
           />
         </main>
       </div>
@@ -368,10 +430,12 @@ export default function HomePage() {
               setSelectedRestaurant(r);
               setActiveTab("search");
               setPanelState("half");
+              setShowParkingPanel(false);
             }}
             center={mapCenter}
             onCenterChange={setMapCenter}
             isMobile={true}
+            parkingLots={parkingLots}
           />
         </div>
 
@@ -446,13 +510,22 @@ export default function HomePage() {
           {/* List */}
           {panelState !== "collapsed" && (
             <div className="flex-1 overflow-y-auto p-3 scrollbar-thin">
-              {activeTab === "search" ? (
+              {showParkingPanel ? (
+                <ParkingPanel
+                  parkingLots={parkingLots}
+                  loading={parkingLoading}
+                  restaurantName={parkingTarget?.name ?? ""}
+                  onNavigate={handleNavigateParkingLot}
+                  onClose={handleCloseParkingPanel}
+                />
+              ) : activeTab === "search" ? (
                 <RestaurantList
                   restaurants={enrichedRestaurants}
                   selectedRestaurant={selectedRestaurant}
                   onSelect={(r) => setSelectedRestaurant(r)}
                   onNavigate={handleNavigate}
                   onRecord={handleOpenRecord}
+                  onFindParking={hasMapsKey ? handleFindParking : undefined}
                   loading={loading}
                   isDemoMode={!hasMapsKey}
                 />

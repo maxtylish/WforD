@@ -2,7 +2,7 @@
 
 import type { Restaurant } from "@/types";
 import { PRICE_LEVEL_INFO, PARKING_TYPE_INFO } from "@/types";
-import { Star, MapPin, Navigation2, BookmarkPlus, BookmarkCheck, ChevronRight } from "lucide-react";
+import { Star, MapPin, Navigation2, BookmarkPlus, BookmarkCheck, ChevronRight, ParkingSquare } from "lucide-react";
 
 interface RestaurantCardProps {
   restaurant: Restaurant;
@@ -10,6 +10,7 @@ interface RestaurantCardProps {
   onClick: () => void;
   onNavigate: (r: Restaurant) => void;
   onRecord:   (r: Restaurant) => void;
+  onFindParking?: (r: Restaurant) => void;
 }
 
 function Stars({ rating }: { rating: number }) {
@@ -22,7 +23,7 @@ function Stars({ rating }: { rating: number }) {
   );
 }
 
-export default function RestaurantCard({ restaurant, isSelected, onClick, onNavigate, onRecord }: RestaurantCardProps) {
+export default function RestaurantCard({ restaurant, isSelected, onClick, onNavigate, onRecord, onFindParking }: RestaurantCardProps) {
   const { name, address, google_rating, total_ratings, cuisine_type,
           parking_types, has_parking, is_open, is_visited,
           personal_rating, price_level } = restaurant;
@@ -103,22 +104,34 @@ export default function RestaurantCard({ restaurant, isSelected, onClick, onNavi
 
       {/* Action buttons (only when selected) */}
       {isSelected && (
-        <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
-          <button
-            onClick={e => { e.stopPropagation(); onNavigate(restaurant); }}
-            className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold text-white rounded-xl py-2.5 transition-colors"
-            style={{ backgroundColor: "var(--brand)" }}
-          >
-            <Navigation2 className="w-3.5 h-3.5" />導航
-          </button>
-          <button
-            onClick={e => { e.stopPropagation(); onRecord(restaurant); }}
-            className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold rounded-xl py-2.5 transition-colors border ${
-              is_visited ? "border-green-300 text-green-700 bg-green-50" : "border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
-            }`}
-          >
-            {is_visited ? <><BookmarkCheck className="w-3.5 h-3.5" />查看紀錄</> : <><BookmarkPlus className="w-3.5 h-3.5" />記錄去過</>}
-          </button>
+        <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
+          {/* Row 1: Navigate + Record */}
+          <div className="flex gap-2">
+            <button
+              onClick={e => { e.stopPropagation(); onNavigate(restaurant); }}
+              className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold text-white rounded-xl py-2.5 transition-colors"
+              style={{ backgroundColor: "var(--brand)" }}
+            >
+              <Navigation2 className="w-3.5 h-3.5" />導航
+            </button>
+            <button
+              onClick={e => { e.stopPropagation(); onRecord(restaurant); }}
+              className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold rounded-xl py-2.5 transition-colors border ${
+                is_visited ? "border-green-300 text-green-700 bg-green-50" : "border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
+              }`}
+            >
+              {is_visited ? <><BookmarkCheck className="w-3.5 h-3.5" />查看紀錄</> : <><BookmarkPlus className="w-3.5 h-3.5" />記錄去過</>}
+            </button>
+          </div>
+          {/* Row 2: Find Parking */}
+          {onFindParking && (
+            <button
+              onClick={e => { e.stopPropagation(); onFindParking(restaurant); }}
+              className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl py-2.5 transition-colors border border-blue-200"
+            >
+              <ParkingSquare className="w-3.5 h-3.5" />尋找最近車位
+            </button>
+          )}
         </div>
       )}
     </div>

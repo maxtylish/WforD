@@ -161,3 +161,14 @@ export interface SearchFilters {
 
 export interface LatLng { lat: number; lng: number; }
 export const TAICHUNG_CENTER: LatLng = { lat: 24.1477, lng: 120.6736 };
+
+// ── Parking Lot (from /api/parking) ──────────────────────────────────────
+export interface ParkingLot {
+  place_id: string;
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  distance_meters: number;
+  is_open?: boolean;
+}

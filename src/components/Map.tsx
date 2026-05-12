@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import type { Restaurant, LatLng } from "@/types";
+import type { Restaurant, LatLng, ParkingLot } from "@/types";
 import { MapPin, Loader2 } from "lucide-react";
 
 interface MapProps {
@@ -12,6 +12,7 @@ interface MapProps {
   onCenterChange?: (center: LatLng) => void;
   onMapReady?: (map: google.maps.Map) => void;
   isMobile?: boolean;
+  parkingLots?: ParkingLot[];
 }
 
 // Custom SVG marker icons
@@ -37,12 +38,14 @@ export default function Map(rawProps: MapProps) {
     onCenterChange,
     onMapReady,
     isMobile = false,
+    parkingLots = [],
   } = rawProps ?? {};
 
   if (!onRestaurantSelect || !center) return null;
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<Record<string, google.maps.Marker>>({});
+  const parkingMarkersRef = useRef<Record<string, google.maps.Marker>>({});
   const [loadState, setLoadState] = useState<"idle" | "loading" | "ready" | "no-key" | "error">("idle");
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -149,6 +152,58 @@ export default function Map(rawProps: MapProps) {
     if (!mapInstanceRef.current || !selectedRestaurant) return;
     mapInstanceRef.current.panTo({ lat: selectedRestaurant.lat, lng: selectedRestaurant.lng });
   }, [selectedRestaurant]);
+
+  // Parking lot markers (blue P)
+  useEffect(() => {
+    if (loadState !== "ready" || !mapInstanceRef.current) return;
+    const map = mapInstanceRef.current;
+    const currentIds = new Set(parkingLots.map((p) => p.place_id));
+
+    // Remove stale parking markers
+    Object.entries(parkingMarkersRef.current).forEach(([id, marker]) => {
+      if (!currentIds.has(id)) {
+        marker.setMap(null);
+        delete parkingMarkersRef.current[id];
+      }
+    });
+
+    // Add new parking markers
+    parkingLots.forEach((lot, idx) => {
+      if (parkingMarkersRef.current[lot.place_id]) return; // already added
+
+      const label = lot.distance_meters < 1000
+        ? `${lot.distance_meters}m`
+        : `${(lot.distance_meters / 1000).toFixed(1)}km`;
+
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 44" width="40" height="40">
+        <rect x="2" y="2" width="40" height="40" rx="8" fill="#1d4ed8" stroke="white" stroke-width="2"/>
+        <text x="22" y="31" text-anchor="middle" font-size="22" font-weight="900" fill="white" font-family="Arial,sans-serif">P</text>
+      </svg>`;
+      const icon = `data:image/svg+xml;base64,${btoa(svg)}`;
+
+      const marker = new google.maps.Marker({
+        position: { lat: lot.lat, lng: lot.lng },
+        map,
+        title: `${lot.name} (${label})`,
+        icon: { url: icon, scaledSize: new google.maps.Size(36, 36) },
+        zIndex: 50 + idx,
+        animation: google.maps.Animation.DROP,
+      });
+
+      const infoWindow = new google.maps.InfoWindow({
+        content: `<div style="font-size:13px;font-weight:600;max-width:180px">
+          <div>${lot.name}</div>
+          <div style="font-size:11px;color:#6b7280;margin-top:2px">${label} · ${lot.address}</div>
+        </div>`,
+      });
+
+      marker.addListener("click", () => {
+        infoWindow.open({ map, anchor: marker });
+      });
+
+      parkingMarkersRef.current[lot.place_id] = marker;
+    });
+  }, [parkingLots, loadState]);
 
   // ── Render states ──────────────────────────────────────────────────────────
   if (loadState === "no-key") {
