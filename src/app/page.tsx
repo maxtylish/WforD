@@ -249,6 +249,32 @@ export default function HomePage() {
     );
   };
 
+  // ── Open 神盾測速照相 app ──────────────────────────────────────────────────
+  const handleOpenShenDon = () => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const PLAY_STORE = "https://play.google.com/store/apps/details?id=tw.com.ainvest.outpack";
+    const APP_STORE  = "https://apps.apple.com/tw/search?term=神盾測速照相";
+
+    if (isIOS) {
+      // iOS: try URL scheme first, fall back to App Store after 1.5s
+      const t = setTimeout(() => { window.location.href = APP_STORE; }, 1500);
+      window.location.href = "ainvest://";
+      // Clear timeout if page hides (app opened successfully)
+      window.addEventListener("pagehide", () => clearTimeout(t), { once: true });
+    } else {
+      // Android: Intent URL launches app directly if installed; otherwise Play Store
+      const a = document.createElement("a");
+      a.href = `intent://#Intent;package=tw.com.ainvest.outpack;` +
+               `action=android.intent.action.MAIN;` +
+               `category=android.intent.category.LAUNCHER;` +
+               `S.browser_fallback_url=${encodeURIComponent(PLAY_STORE)};end`;
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  };
+
   // ── Quick destination navigation ───────────────────────────────────────────
   const handleQuickNav = (address: string) => {
     const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}&travelmode=driving`;
@@ -454,7 +480,7 @@ export default function HomePage() {
           </button>
         </div>
 
-        {/* Row 2: Quick destination buttons */}
+        {/* Row 2: Quick destination buttons + 神盾 */}
         <div className="flex gap-2 px-4 pb-3 overflow-x-auto scrollbar-none">
           {QUICK_DESTINATIONS.map(({ label, address, icon: Icon, color }) => (
             <button
@@ -466,6 +492,18 @@ export default function HomePage() {
               {label}
             </button>
           ))}
+
+          {/* Divider */}
+          <div className="w-px bg-gray-200 shrink-0 self-stretch my-0.5" />
+
+          {/* 神盾測速照相 */}
+          <button
+            onClick={handleOpenShenDon}
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors shrink-0 text-sky-700 bg-sky-50 border-sky-200 hover:bg-sky-100"
+            title="開啟神盾測速照相 APP"
+          >
+            🛡️ 神盾
+          </button>
         </div>
       </header>
 
